@@ -1,0 +1,22 @@
+services:
+  # Backend API
+  - type: web
+    name: lead-generator-api
+    env: python
+    region: oregon
+    plan: starter
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn api:app --host 0.0.0.0 --port $PORT --workers 4
+    healthCheckPath: /health
+    envVars:
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: EMAIL_USER
+        sync: false
+      - key: EMAIL_PASSWORD
+        sync: false
+      - key: SENDGRID_API_KEY
+        sync: false
+      - key: PYTHONUNBUFFERED
+        value: "1"
+
