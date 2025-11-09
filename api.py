@@ -44,6 +44,7 @@ app = FastAPI(
 # Configure CORS for production
 ALLOWED_ORIGINS = os.getenv(
     "ALLOWED_ORIGINS", 
+    "https://lead-gen-rust.vercel.app/"
     "http://localhost:3000,http://localhost:5173,http://127.0.0.1:3000"
 ).split(",")
 
