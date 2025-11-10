@@ -11,7 +11,7 @@ const socialIcons = {
   youtube: Youtube
 }
 
-export default function ResultsPanel({ results, config }) {
+export default function ResultsPanel({ results, config, onClose }) {
   const [selectedCompany, setSelectedCompany] = useState(null)
   const [emailModalCompany, setEmailModalCompany] = useState(null)
   const [showExportMenu, setShowExportMenu] = useState(false)
@@ -128,64 +128,82 @@ export default function ResultsPanel({ results, config }) {
       animate={{ x: 0 }}
       exit={{ x: '100%' }}
       transition={{ type: 'spring', damping: 25 }}
-      className="w-[480px] bg-white border-l border-gray-200 flex flex-col shadow-2xl"
+      className="fixed lg:relative inset-y-0 right-0 w-full sm:w-[480px] lg:w-[480px] bg-white border-l border-gray-200 flex flex-col shadow-2xl z-40"
     >
       {/* Header */}
-      <div className="p-6 border-b border-gray-200">
+      <div className="p-4 sm:p-6 border-b border-gray-200 bg-gray-50">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-2xl font-bold text-gray-900">Lead Results</h2>
+          <div className="flex items-center space-x-2">
+            <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900">Lead Results</h2>
+          </div>
 
-          {/* Export Dropdown */}
-          <div className="relative" ref={exportMenuRef}>
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => setShowExportMenu(!showExportMenu)}
-              className="flex items-center space-x-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors"
-            >
-              <Download className="w-4 h-4" />
-              <span className="font-medium">Export</span>
-              <svg
-                className={`w-4 h-4 transition-transform ${showExportMenu ? 'rotate-180' : ''}`}
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
+          <div className="flex items-center space-x-2">
+
+            {/* Export Dropdown */}
+            <div className="relative" ref={exportMenuRef}>
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => setShowExportMenu(!showExportMenu)}
+                className="flex items-center space-x-1 sm:space-x-2 px-3 sm:px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors"
               >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
-            </motion.button>
+                <Download className="w-4 h-4" />
+                <span className="hidden sm:inline font-medium">Export</span>
+                <svg
+                  className={`w-4 h-4 transition-transform ${showExportMenu ? 'rotate-180' : ''}`}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </motion.button>
 
-            {/* Dropdown Menu */}
-            {showExportMenu && (
-              <motion.div
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-xl border border-gray-200 overflow-hidden z-10"
+              {/* Dropdown Menu */}
+              {showExportMenu && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-xl border border-gray-200 overflow-hidden z-10"
+                >
+                  <button
+                    onClick={exportJSON}
+                    className="w-full flex items-center space-x-3 px-4 py-3 hover:bg-gray-50 transition-colors"
+                  >
+                    <FileJson className="w-5 h-5 text-blue-600" />
+                    <div className="text-left">
+                      <div className="text-sm font-medium text-gray-900">Export as JSON</div>
+                      <div className="text-xs text-gray-500">Structured data format</div>
+                    </div>
+                  </button>
+
+                  <div className="border-t border-gray-100"></div>
+
+                  <button
+                    onClick={exportTXT}
+                    className="w-full flex items-center space-x-3 px-4 py-3 hover:bg-gray-50 transition-colors"
+                  >
+                    <FileText className="w-5 h-5 text-green-600" />
+                    <div className="text-left">
+                      <div className="text-sm font-medium text-gray-900">Export as TXT</div>
+                      <div className="text-xs text-gray-500">Human-readable format</div>
+                    </div>
+                  </button>
+                </motion.div>
+              )}
+            </div>
+
+            {/* Close Button (Mobile & All Devices) */}
+            {onClose && (
+              <motion.button
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+                onClick={onClose}
+                className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
+                title="Close results panel"
               >
-                <button
-                  onClick={exportJSON}
-                  className="w-full flex items-center space-x-3 px-4 py-3 hover:bg-gray-50 transition-colors"
-                >
-                  <FileJson className="w-5 h-5 text-blue-600" />
-                  <div className="text-left">
-                    <div className="text-sm font-medium text-gray-900">Export as JSON</div>
-                    <div className="text-xs text-gray-500">Structured data format</div>
-                  </div>
-                </button>
-
-                <div className="border-t border-gray-100"></div>
-
-                <button
-                  onClick={exportTXT}
-                  className="w-full flex items-center space-x-3 px-4 py-3 hover:bg-gray-50 transition-colors"
-                >
-                  <FileText className="w-5 h-5 text-green-600" />
-                  <div className="text-left">
-                    <div className="text-sm font-medium text-gray-900">Export as TXT</div>
-                    <div className="text-xs text-gray-500">Human-readable format</div>
-                  </div>
-                </button>
-              </motion.div>
+                <X className="w-5 h-5 text-gray-700" />
+              </motion.button>
             )}
           </div>
         </div>

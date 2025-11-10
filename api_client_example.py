@@ -8,7 +8,7 @@ import json
 import time
 
 # API Configuration
-API_BASE_URL = "http://localhost:8000"
+API_BASE_URL = "https://lead-gen-aes4.onrender.com"
 API_VERSION = "v1"
 
 
