@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { Sparkles, Building2, Globe, Hash, Zap } from 'lucide-react'
+import { Sparkles, Building2, Globe, Hash, Zap, ArrowLeft } from 'lucide-react'
 
-export default function InputForm({ onStart }) {
+export default function InputForm({ onStart, onBack }) {
   const [formData, setFormData] = useState({
     industry: '',
     number: 10,
@@ -18,7 +18,22 @@ export default function InputForm({ onStart }) {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4">
+    <div className="min-h-screen flex items-center justify-center p-4 relative">
+      {/* Back button */}
+      {onBack && (
+        <motion.button
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={onBack}
+          className="absolute top-8 left-8 flex items-center space-x-2 px-4 py-2 bg-white hover:bg-gray-50 rounded-xl shadow-lg transition-colors z-20"
+        >
+          <ArrowLeft className="w-5 h-5 text-gray-700" />
+          <span className="font-medium text-gray-700">Back to Home</span>
+        </motion.button>
+      )}
+      
       {/* Background decoration */}
       <div className="absolute inset-0 grid-pattern opacity-50"></div>
       
