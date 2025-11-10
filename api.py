@@ -413,6 +413,7 @@ async def send_email(request: EmailRequest):
     Returns success status and message.
     """
     try:
+        logger.info(f"Email send request: from={request.from_email}, to={request.to_email}")
         email_sender = get_email_sender()
         
         # Process attachments (convert base64 to files)
@@ -446,6 +447,7 @@ async def send_email(request: EmailRequest):
         
         # Send email (from_email is now used properly)
         # CC the user so they get a copy of what they sent
+        logger.info(f"Sending email via email service...")
         result = email_sender.send_email(
             from_email=request.from_email,
             to_email=request.to_email,
@@ -455,18 +457,27 @@ async def send_email(request: EmailRequest):
             cc_email=request.from_email  # User gets a copy
         )
         
+        logger.info(f"Email send result: {result}")
+        logger.info(f"Result type: {type(result)}, Success: {result.get('success')}")
+        
         # Clean up temporary files
         for temp_file in temp_files:
             try:
                 os_module.unlink(temp_file)
-            except:
-                pass
+            except Exception as cleanup_error:
+                logger.warning(f"Failed to cleanup temp file: {cleanup_error}")
         
-        if result["success"]:
-            return {
+        # Check if result is a dict and has success key
+        if not isinstance(result, dict):
+            logger.error(f"Invalid result type: {type(result)}, value: {result}")
+            raise HTTPException(status_code=500, detail="Email service returned invalid response")
+        
+        if result.get("success") is True:
+            logger.info("Email sent successfully, returning success response")
+            response_data = {
                 "success": True,
-                "message": result["message"],
-                "method": result["method"],
+                "message": f"Email sent successfully to {request.to_email}",
+                "method": result.get("method", "unknown"),
                 "to": request.to_email,
                 "from": request.from_email,
                 "cc": request.from_email,
@@ -474,13 +485,21 @@ async def send_email(request: EmailRequest):
                 "sent_at": datetime.utcnow().isoformat(),
                 "note": f"A copy of this email was sent to {request.from_email}"
             }
+            logger.info(f"Returning response: {response_data}")
+            return response_data
         else:
-            raise HTTPException(status_code=500, detail=result["message"])
+            error_msg = result.get("message", "Unknown error occurred")
+            logger.error(f"Email sending marked as failed: {error_msg}")
+            raise HTTPException(status_code=500, detail=error_msg)
             
+    except HTTPException:
+        raise  # Re-raise HTTP exceptions as-is
     except ValueError as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Email validation error: {str(e)}")
+        raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Email sending failed: {str(e)}")
+        logger.error(f"Unexpected email error: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to send email. Please check your email configuration.")
 
 
 @app.post("/api/v1/email/generate-content", tags=["Email"])

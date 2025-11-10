@@ -127,11 +127,28 @@ export default function EmailModal({ company, onClose }) {
         const attachmentInfo = attachments.length > 0 
           ? ` with ${attachments.length} attachment(s)` 
           : ''
-        alert(`Email sent successfully${attachmentInfo}! ✅\n\n📧 A copy was sent to ${fromEmail}`)
+        alert(`✅ Email sent successfully${attachmentInfo}!\n\n📧 Sent to: ${toEmail}\n📬 CC copy sent to: ${fromEmail}`)
         onClose()
       }
     } catch (error) {
-      alert('Failed to send email: ' + (error.response?.data?.detail || error.message))
+      console.error('Email send error:', error)
+      
+      // Better error messages
+      let errorMessage = 'Failed to send email.'
+      
+      if (error.response?.status === 500) {
+        errorMessage = 'Server error. Please check:\n' +
+          '1. Email service is configured (.env file)\n' +
+          '2. Email credentials are correct\n' +
+          '3. Your email is valid\n\n' +
+          'Error: ' + (error.response?.data?.detail || error.message)
+      } else if (error.response?.status === 400) {
+        errorMessage = 'Invalid email data: ' + (error.response?.data?.detail || error.message)
+      } else {
+        errorMessage = error.response?.data?.detail || error.message || 'Unknown error'
+      }
+      
+      alert(errorMessage)
     } finally {
       setSending(false)
     }
