@@ -182,7 +182,17 @@ def generate_leads_sync(industry: str, number: int, country: str, enable_scrapin
         return result
         
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Lead generation failed: {str(e)}")
+        error_msg = str(e)
+        # Check if it's a 503/overload error
+        if '503' in error_msg or 'overloaded' in error_msg.lower() or 'unavailable' in error_msg.lower():
+            logger.warning(f"503 error during lead generation: {error_msg}")
+            raise HTTPException(
+                status_code=503,
+                detail=f"Lead generation failed: {error_msg}"
+            )
+        else:
+            logger.error(f"Lead generation error: {error_msg}")
+            raise HTTPException(status_code=500, detail=f"Lead generation failed: {error_msg}")
 
 
 async def generate_leads_background(job_id: str, industry: str, number: int, country: str, enable_scraping: bool):

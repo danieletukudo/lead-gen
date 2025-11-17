@@ -3,7 +3,10 @@
 
 import os
 import json
+import time
+import logging
 from openai import OpenAI
+from openai import APIError, APIConnectionError, APITimeoutError
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -15,8 +18,66 @@ class GeminiClient:
         
         self.client = OpenAI(
             api_key=os.getenv('GEMINI_API_KEY'),
-            base_url=base_url
+            base_url=base_url,
+            timeout=120.0  # 2 minute timeout
         )
+    
+    def _is_retryable_error(self, exception):
+        """Check if the error is retryable (503, 429, or connection errors)"""
+        if isinstance(exception, APIError):
+            # Check for 503 or 429 status codes
+            if hasattr(exception, 'status_code'):
+                if exception.status_code in [503, 429]:
+                    return True
+            # Check error message for overloaded/unavailable
+            error_msg = str(exception).lower()
+            if 'overloaded' in error_msg or 'unavailable' in error_msg or '503' in error_msg or '429' in error_msg:
+                return True
+        elif isinstance(exception, (APIConnectionError, APITimeoutError)):
+            return True
+        return False
+    
+    def _make_api_call(self, prompt):
+        """Make API call with retry logic"""
+        max_retries = 5
+        attempt = 0
+        
+        while attempt < max_retries:
+            try:
+                response = self.client.chat.completions.create(
+                    model="gemini-2.5-pro",
+                    messages=[
+                        {
+                            "role": "user",
+                            "content": prompt
+                        }
+                    ]
+                )
+                return response
+            except (APIError, APIConnectionError, APITimeoutError) as e:
+                attempt += 1
+                
+                # Check if it's a retryable error
+                if self._is_retryable_error(e):
+                    if attempt < max_retries:
+                        # Calculate exponential backoff: 2^attempt seconds, max 60s
+                        wait_time = min(2 ** attempt, 60)
+                        logging.warning(
+                            f"⚠️ API error (retryable): {str(e)}. "
+                            f"Retrying in {wait_time}s (attempt {attempt}/{max_retries})..."
+                        )
+                        time.sleep(wait_time)
+                        continue
+                    else:
+                        # All retries exhausted
+                        raise Exception(
+                            f"Error code: 503 - The AI model is currently overloaded. "
+                            f"We tried {max_retries} times with automatic retries, but the service is still unavailable. "
+                            f"Please try again in a few minutes."
+                        )
+                else:
+                    # Non-retryable error, raise immediately
+                    raise
     
     def generate_companies(self, industry, number, country):
         prompt = f"""
@@ -64,14 +125,23 @@ class GeminiClient:
         Remember: Return ONLY the JSON object, no additional text or formatting.
         """
         
-        response = self.client.chat.completions.create(
-            model="gemini-2.5-pro",
-            messages=[
-                {
-                    "role": "user",
-                    "content": prompt
-                }
-            ]
+        try:
+            response = self._make_api_call(prompt)
+        except APIError as e:
+            # After all retries failed, provide a user-friendly error message
+            error_msg = str(e)
+            if '503' in error_msg or 'overloaded' in error_msg.lower() or 'unavailable' in error_msg.lower():
+                raise Exception(
+                    f"Error code: 503 - The AI model is currently overloaded. "
+                    f"We tried 5 times with automatic retries, but the service is still unavailable. "
+                    f"Please try again in a few minutes."
+                )
+            else:
+                raise Exception(f"API Error: {error_msg}")
+        except (APIConnectionError, APITimeoutError) as e:
+            raise Exception(
+                f"Connection error: Unable to reach the AI service. "
+                f"Please check your internet connection and try again."
         )
         
         response_text = response.choices[0].message.content
