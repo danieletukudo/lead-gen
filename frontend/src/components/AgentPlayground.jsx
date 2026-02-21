@@ -161,7 +161,7 @@ export default function AgentPlayground({ config, onReset }) {
       const apiUrl = API_BASE_URL + API_ENDPOINTS.generateLeads
       const { emailCampaign, ...leadConfig } = config
       const response = await axios.post(apiUrl, leadConfig, {
-        timeout: 300000
+        timeout: 1800000
       })
 
       if (config.enable_web_scraping) {
