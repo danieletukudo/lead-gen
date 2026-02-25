@@ -1,12 +1,13 @@
 import { motion } from 'framer-motion'
-import { Brain, Globe, Database, CheckCircle, Loader, Sparkles } from 'lucide-react'
+import { Brain, Globe, Database, CheckCircle, Loader, Sparkles, Search, Send } from 'lucide-react'
 
 const icons = {
   1: Sparkles,
-  2: Brain,
+  2: Search,
   3: Globe,
   4: Database,
-  5: CheckCircle
+  5: CheckCircle,
+  6: CheckCircle
 }
 
 export default function ProcessNode({ stage, index, isActive, isCompleted, isProcessing }) {

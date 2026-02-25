@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react'
 import { motion } from 'framer-motion'
-import { Sparkles, Building2, Globe, Hash, Zap, ArrowLeft, Mail, FileText, Paperclip, X } from 'lucide-react'
+import { Sparkles, Briefcase, Globe, Hash, Zap, ArrowLeft, Mail, FileText, Paperclip, X, Upload, Info } from 'lucide-react'
 import ReactQuill from 'react-quill'
 import 'react-quill/dist/quill.snow.css'
 
@@ -14,12 +14,49 @@ export default function InputForm({ onStart, onBack }) {
 
   const [emailData, setEmailData] = useState({
     from_email: '',
-    subject: '',
+    subject: 'Experienced Professional — Open to Opportunities at {{company_name}}',
     body: ''
   })
 
+  const [cvFile, setCvFile] = useState(null)
   const [attachments, setAttachments] = useState([])
   const fileInputRef = useRef(null)
+  const cvInputRef = useRef(null)
+
+  const handleCvSelect = async (e) => {
+    const file = e.target.files[0]
+    if (!file) return
+
+    const MAX_FILE_SIZE = 10 * 1024 * 1024
+    if (file.size > MAX_FILE_SIZE) {
+      alert('CV file is too large. Maximum size is 10MB.')
+      return
+    }
+
+    const validTypes = [
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    ]
+    if (!validTypes.includes(file.type) && !file.name.match(/\.(pdf|doc|docx)$/i)) {
+      alert('Please upload a PDF or Word document (.pdf, .doc, .docx)')
+      return
+    }
+
+    try {
+      const base64 = await fileToBase64(file)
+      setCvFile({
+        filename: file.name,
+        content: base64.split(',')[1],
+        mimetype: file.type || 'application/octet-stream',
+        size: file.size
+      })
+    } catch (error) {
+      console.error('Error reading CV:', error)
+      alert('Failed to read CV file.')
+    }
+    if (cvInputRef.current) cvInputRef.current.value = ''
+  }
 
   const handleFileSelect = async (e) => {
     const files = Array.from(e.target.files)
@@ -68,17 +105,31 @@ export default function InputForm({ onStart, onBack }) {
     if (!formData.industry.trim()) return
 
     const hasEmail = emailData.from_email && emailData.subject && emailData.body
+
+    // Combine CV + extra attachments
+    const allAttachments = []
+    if (cvFile) {
+      allAttachments.push({
+        filename: cvFile.filename,
+        content: cvFile.content,
+        mimetype: cvFile.mimetype
+      })
+    }
+    attachments.forEach(a => {
+      allAttachments.push({
+        filename: a.filename,
+        content: a.content,
+        mimetype: a.mimetype
+      })
+    })
+
     onStart({
       ...formData,
       emailCampaign: hasEmail ? {
         from_email: emailData.from_email,
         subject: emailData.subject,
         body: emailData.body,
-        attachments: attachments.length > 0 ? attachments.map(a => ({
-          filename: a.filename,
-          content: a.content,
-          mimetype: a.mimetype
-        })) : null
+        attachments: allAttachments.length > 0 ? allAttachments : null
       } : null
     })
   }
@@ -124,7 +175,7 @@ export default function InputForm({ onStart, onBack }) {
             transition={{ delay: 0.2 }}
             className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-primary-500 to-primary-700 rounded-2xl mb-6 shadow-xl"
           >
-            <Sparkles className="w-10 h-10 text-white" />
+            <Briefcase className="w-10 h-10 text-white" />
           </motion.div>
 
           <motion.h1
@@ -133,7 +184,7 @@ export default function InputForm({ onStart, onBack }) {
             transition={{ delay: 0.3 }}
             className="text-5xl font-bold text-gray-900 mb-4"
           >
-            AI Lead Generator
+            Recruiter Outreach
           </motion.h1>
 
           <motion.p
@@ -142,7 +193,7 @@ export default function InputForm({ onStart, onBack }) {
             transition={{ delay: 0.4 }}
             className="text-xl text-gray-600"
           >
-            Generate qualified leads with Agentic AI intelligence
+            Find recruiters and send them your CV with a personalized message
           </motion.p>
         </div>
 
@@ -154,27 +205,27 @@ export default function InputForm({ onStart, onBack }) {
           className="bg-white rounded-3xl shadow-2xl p-8 md:p-12"
         >
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Industry Input */}
+            {/* Industry/Role Input */}
             <div>
               <label className="flex items-center text-sm font-semibold text-gray-700 mb-3">
-                <Building2 className="w-5 h-5 mr-2 text-primary-500" />
-                Target Industry
+                <Briefcase className="w-5 h-5 mr-2 text-primary-500" />
+                Target Role / Industry
               </label>
               <input
                 type="text"
                 value={formData.industry}
                 onChange={(e) => setFormData({ ...formData, industry: e.target.value })}
-                placeholder="e.g., health insurance, technology, finance"
+                placeholder="e.g., software engineering, data science, marketing"
                 className="w-full px-6 py-4 border-2 border-gray-200 rounded-xl focus:border-primary-500 focus:outline-none transition-colors text-lg"
                 required
               />
             </div>
 
-            {/* Number of Companies */}
+            {/* Number of Recruiters */}
             <div>
               <label className="flex items-center text-sm font-semibold text-gray-700 mb-3">
                 <Hash className="w-5 h-5 mr-2 text-primary-500" />
-                Number of Companies
+                Number of Recruiters
               </label>
               <input
                 type="number"
@@ -200,10 +251,10 @@ export default function InputForm({ onStart, onBack }) {
                 className="w-full px-6 py-4 border-2 border-gray-200 rounded-xl focus:border-primary-500 focus:outline-none transition-colors text-lg"
                 required
               />
-              <p className="mt-2 text-sm text-gray-500">Maximum 50 companies per request</p>
+              <p className="mt-2 text-sm text-gray-500">Maximum 50 recruiters per request</p>
             </div>
 
-            {/* Country Input */}
+            {/* Country */}
             <div>
               <label className="flex items-center text-sm font-semibold text-gray-700 mb-3">
                 <Globe className="w-5 h-5 mr-2 text-primary-500" />
@@ -222,114 +273,58 @@ export default function InputForm({ onStart, onBack }) {
                   <option value="France">France</option>
                   <option value="Australia">Australia</option>
                   <option value="India">India</option>
-                  <option value="China">China</option>
-                  <option value="Japan">Japan</option>
                   <option value="Singapore">Singapore</option>
+                  <option value="UAE">United Arab Emirates</option>
+                  <option value="Netherlands">Netherlands</option>
                 </optgroup>
                 <optgroup label="Africa">
-                  <option value="Algeria">Algeria</option>
-                  <option value="Angola">Angola</option>
                   <option value="Egypt">Egypt</option>
-                  <option value="Ethiopia">Ethiopia</option>
                   <option value="Ghana">Ghana</option>
                   <option value="Kenya">Kenya</option>
-                  <option value="Morocco">Morocco</option>
                   <option value="Nigeria">Nigeria</option>
                   <option value="South Africa">South Africa</option>
                   <option value="Tanzania">Tanzania</option>
-                  <option value="Tunisia">Tunisia</option>
                   <option value="Uganda">Uganda</option>
                 </optgroup>
                 <optgroup label="Asia">
-                  <option value="Afghanistan">Afghanistan</option>
-                  <option value="Bangladesh">Bangladesh</option>
-                  <option value="Cambodia">Cambodia</option>
-                  <option value="Hong Kong">Hong Kong</option>
-                  <option value="Indonesia">Indonesia</option>
-                  <option value="Israel">Israel</option>
-                  <option value="Jordan">Jordan</option>
-                  <option value="Kazakhstan">Kazakhstan</option>
+                  <option value="China">China</option>
+                  <option value="Japan">Japan</option>
                   <option value="South Korea">South Korea</option>
-                  <option value="Lebanon">Lebanon</option>
+                  <option value="Indonesia">Indonesia</option>
                   <option value="Malaysia">Malaysia</option>
-                  <option value="Myanmar">Myanmar</option>
-                  <option value="Nepal">Nepal</option>
-                  <option value="Pakistan">Pakistan</option>
                   <option value="Philippines">Philippines</option>
-                  <option value="Qatar">Qatar</option>
-                  <option value="Saudi Arabia">Saudi Arabia</option>
-                  <option value="Sri Lanka">Sri Lanka</option>
-                  <option value="Taiwan">Taiwan</option>
                   <option value="Thailand">Thailand</option>
-                  <option value="Turkey">Turkey</option>
-                  <option value="UAE">United Arab Emirates</option>
                   <option value="Vietnam">Vietnam</option>
+                  <option value="Israel">Israel</option>
+                  <option value="Saudi Arabia">Saudi Arabia</option>
+                  <option value="Qatar">Qatar</option>
+                  <option value="Pakistan">Pakistan</option>
+                  <option value="Bangladesh">Bangladesh</option>
                 </optgroup>
                 <optgroup label="Europe">
-                  <option value="Albania">Albania</option>
                   <option value="Austria">Austria</option>
                   <option value="Belgium">Belgium</option>
-                  <option value="Bulgaria">Bulgaria</option>
-                  <option value="Croatia">Croatia</option>
-                  <option value="Cyprus">Cyprus</option>
                   <option value="Czech Republic">Czech Republic</option>
                   <option value="Denmark">Denmark</option>
-                  <option value="Estonia">Estonia</option>
                   <option value="Finland">Finland</option>
-                  <option value="Greece">Greece</option>
-                  <option value="Hungary">Hungary</option>
-                  <option value="Iceland">Iceland</option>
                   <option value="Ireland">Ireland</option>
                   <option value="Italy">Italy</option>
-                  <option value="Latvia">Latvia</option>
-                  <option value="Lithuania">Lithuania</option>
-                  <option value="Luxembourg">Luxembourg</option>
-                  <option value="Malta">Malta</option>
-                  <option value="Netherlands">Netherlands</option>
                   <option value="Norway">Norway</option>
                   <option value="Poland">Poland</option>
                   <option value="Portugal">Portugal</option>
-                  <option value="Romania">Romania</option>
-                  <option value="Russia">Russia</option>
-                  <option value="Serbia">Serbia</option>
-                  <option value="Slovakia">Slovakia</option>
-                  <option value="Slovenia">Slovenia</option>
                   <option value="Spain">Spain</option>
                   <option value="Sweden">Sweden</option>
                   <option value="Switzerland">Switzerland</option>
-                  <option value="Ukraine">Ukraine</option>
                 </optgroup>
-                <optgroup label="North America">
-                  <option value="Costa Rica">Costa Rica</option>
-                  <option value="Cuba">Cuba</option>
-                  <option value="Dominican Republic">Dominican Republic</option>
-                  <option value="El Salvador">El Salvador</option>
-                  <option value="Guatemala">Guatemala</option>
-                  <option value="Honduras">Honduras</option>
-                  <option value="Jamaica">Jamaica</option>
-                  <option value="Mexico">Mexico</option>
-                  <option value="Nicaragua">Nicaragua</option>
-                  <option value="Panama">Panama</option>
-                  <option value="Puerto Rico">Puerto Rico</option>
-                  <option value="Trinidad and Tobago">Trinidad and Tobago</option>
-                </optgroup>
-                <optgroup label="South America">
-                  <option value="Argentina">Argentina</option>
-                  <option value="Bolivia">Bolivia</option>
+                <optgroup label="Americas">
                   <option value="Brazil">Brazil</option>
-                  <option value="Chile">Chile</option>
+                  <option value="Mexico">Mexico</option>
+                  <option value="Argentina">Argentina</option>
                   <option value="Colombia">Colombia</option>
-                  <option value="Ecuador">Ecuador</option>
-                  <option value="Paraguay">Paraguay</option>
-                  <option value="Peru">Peru</option>
-                  <option value="Uruguay">Uruguay</option>
-                  <option value="Venezuela">Venezuela</option>
+                  <option value="Chile">Chile</option>
                 </optgroup>
                 <optgroup label="Oceania">
-                  <option value="Fiji">Fiji</option>
                   <option value="New Zealand">New Zealand</option>
-                  <option value="Papua New Guinea">Papua New Guinea</option>
-                  <option value="Solomon Islands">Solomon Islands</option>
                 </optgroup>
               </select>
             </div>
@@ -355,6 +350,48 @@ export default function InputForm({ onStart, onBack }) {
               </label>
             </div>
 
+            {/* CV Upload */}
+            <div>
+              <label className="flex items-center text-sm font-semibold text-gray-700 mb-3">
+                <Upload className="w-5 h-5 mr-2 text-primary-500" />
+                Upload Your CV / Resume
+              </label>
+              {!cvFile ? (
+                <div
+                  onClick={() => cvInputRef.current?.click()}
+                  className="border-2 border-dashed border-primary-300 bg-primary-50/30 rounded-xl p-6 text-center cursor-pointer hover:border-primary-500 hover:bg-primary-50 transition-colors"
+                >
+                  <Upload className="w-8 h-8 text-primary-400 mx-auto mb-2" />
+                  <p className="text-sm font-medium text-primary-700">Click to upload your CV</p>
+                  <p className="text-xs text-gray-500 mt-1">PDF or Word document (max 10MB)</p>
+                </div>
+              ) : (
+                <div className="flex items-center justify-between px-4 py-3 bg-primary-50 border border-primary-200 rounded-xl">
+                  <div className="flex items-center space-x-3 flex-1 min-w-0">
+                    <FileText className="w-5 h-5 text-primary-600 flex-shrink-0" />
+                    <div className="min-w-0">
+                      <div className="text-sm font-medium text-gray-900 truncate">{cvFile.filename}</div>
+                      <div className="text-xs text-gray-500">{formatFileSize(cvFile.size)}</div>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setCvFile(null)}
+                    className="p-1 hover:bg-red-100 rounded transition-colors flex-shrink-0"
+                  >
+                    <X className="w-4 h-4 text-red-500" />
+                  </button>
+                </div>
+              )}
+              <input
+                ref={cvInputRef}
+                type="file"
+                className="hidden"
+                onChange={handleCvSelect}
+                accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+              />
+            </div>
+
             {/* Divider */}
             <div className="relative py-2">
               <div className="absolute inset-0 flex items-center">
@@ -363,7 +400,7 @@ export default function InputForm({ onStart, onBack }) {
               <div className="relative flex justify-center">
                 <span className="bg-white px-4 text-sm font-semibold text-primary-600 flex items-center space-x-2">
                   <Mail className="w-4 h-4" />
-                  <span>Auto-Email Campaign (Optional)</span>
+                  <span>Auto-Email Outreach (Optional)</span>
                 </span>
               </div>
             </div>
@@ -371,9 +408,23 @@ export default function InputForm({ onStart, onBack }) {
             {/* Email Campaign Section */}
             <div className="bg-green-50 border border-green-200 rounded-xl p-6 space-y-4">
               <p className="text-sm text-green-700">
-                Fill in these fields to automatically send your email to every discovered lead.
-                Leave empty to skip auto-sending.
+                Fill in these fields to automatically email every recruiter found. Your CV will be attached automatically.
+                Leave empty to just view results without emailing.
               </p>
+
+              {/* Personalization hint */}
+              <div className="bg-white border border-green-300 rounded-lg p-3 flex items-start space-x-2">
+                <Info className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+                <div className="text-xs text-green-800">
+                  <span className="font-semibold">Personalization placeholders:</span> Use these in your subject and message to auto-personalize each email:
+                  <div className="mt-1 space-x-2 flex flex-wrap gap-1">
+                    <code className="px-1.5 py-0.5 bg-green-100 rounded text-green-900">{'{{recruiter_name}}'}</code>
+                    <code className="px-1.5 py-0.5 bg-green-100 rounded text-green-900">{'{{company_name}}'}</code>
+                    <code className="px-1.5 py-0.5 bg-green-100 rounded text-green-900">{'{{first_name}}'}</code>
+                    <code className="px-1.5 py-0.5 bg-green-100 rounded text-green-900">{'{{job_title}}'}</code>
+                  </div>
+                </div>
+              </div>
 
               {/* From Email */}
               <div>
@@ -385,7 +436,7 @@ export default function InputForm({ onStart, onBack }) {
                   type="email"
                   value={emailData.from_email}
                   onChange={(e) => setEmailData({ ...emailData, from_email: e.target.value })}
-                  placeholder="your.email@company.com"
+                  placeholder="your.email@example.com"
                   className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-green-500 focus:outline-none transition-colors"
                 />
               </div>
@@ -400,7 +451,7 @@ export default function InputForm({ onStart, onBack }) {
                   type="text"
                   value={emailData.subject}
                   onChange={(e) => setEmailData({ ...emailData, subject: e.target.value })}
-                  placeholder="Email subject line..."
+                  placeholder="e.g., Experienced Developer — Open to Opportunities at {{company_name}}"
                   className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-green-500 focus:outline-none transition-colors"
                 />
               </div>
@@ -413,17 +464,17 @@ export default function InputForm({ onStart, onBack }) {
                     value={emailData.body}
                     onChange={(val) => setEmailData({ ...emailData, body: val })}
                     modules={quillModules}
-                    placeholder="Write your email message here..."
+                    placeholder="Hi {{first_name}}, I came across your profile and noticed you recruit for roles in my area of expertise. I'd love to connect about opportunities at {{company_name}}..."
                     className="h-48"
                   />
                 </div>
               </div>
 
-              {/* Attachments */}
+              {/* Extra Attachments */}
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <label className="text-sm font-semibold text-gray-700">
-                    Attachments {attachments.length > 0 && `(${attachments.length})`}
+                    Extra Attachments {attachments.length > 0 && `(${attachments.length})`}
                   </label>
                   <button
                     type="button"
@@ -443,16 +494,7 @@ export default function InputForm({ onStart, onBack }) {
                   />
                 </div>
 
-                {attachments.length === 0 ? (
-                  <div
-                    onClick={() => fileInputRef.current?.click()}
-                    className="border-2 border-dashed border-gray-300 rounded-xl p-4 text-center cursor-pointer hover:border-green-400 hover:bg-green-50/30 transition-colors"
-                  >
-                    <Paperclip className="w-6 h-6 text-gray-400 mx-auto mb-1" />
-                    <p className="text-sm text-gray-500">Click to attach files</p>
-                    <p className="text-xs text-gray-400">Max 10MB per file</p>
-                  </div>
-                ) : (
+                {attachments.length > 0 && (
                   <div className="space-y-2">
                     {attachments.map((att, index) => (
                       <div
@@ -488,8 +530,8 @@ export default function InputForm({ onStart, onBack }) {
               className="w-full py-5 bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-800 text-white font-bold text-lg rounded-xl shadow-lg hover:shadow-xl transition-all duration-200"
             >
               {emailData.from_email && emailData.subject && emailData.body
-                ? 'Generate Leads & Auto-Send Emails →'
-                : 'Generate Leads →'
+                ? 'Find Recruiters & Auto-Send Emails →'
+                : 'Find Recruiters →'
               }
             </motion.button>
           </form>
@@ -499,15 +541,15 @@ export default function InputForm({ onStart, onBack }) {
             <div className="grid grid-cols-3 gap-4 text-center">
               <div>
                 <div className="text-2xl font-bold text-primary-600">10-30s</div>
-                <div className="text-xs text-gray-500 mt-1">AI Generation</div>
+                <div className="text-xs text-gray-500 mt-1">AI Search</div>
               </div>
               <div>
                 <div className="text-2xl font-bold text-primary-600">2-5min</div>
                 <div className="text-xs text-gray-500 mt-1">With Scraping</div>
               </div>
               <div>
-                <div className="text-2xl font-bold text-primary-600">100%</div>
-                <div className="text-xs text-gray-500 mt-1">Accuracy</div>
+                <div className="text-2xl font-bold text-primary-600">Auto</div>
+                <div className="text-xs text-gray-500 mt-1">Personalized</div>
               </div>
             </div>
           </div>

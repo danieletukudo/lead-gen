@@ -1,123 +1,51 @@
 import { motion } from 'framer-motion'
-import { X, Download, Building2, Mail, Linkedin, Twitter, Facebook, Instagram, Youtube, Users, MapPin, DollarSign, TrendingUp, Send, FileText, FileJson } from 'lucide-react'
+import { X, Download, Mail, Linkedin, Twitter, Users, MapPin, Send, FileText, FileJson, Briefcase, UserCheck, ExternalLink } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
 import EmailModal from './EmailModal'
 
-const socialIcons = {
-  linkedin: Linkedin,
-  twitter: Twitter,
-  facebook: Facebook,
-  instagram: Instagram,
-  youtube: Youtube
-}
-
 export default function ResultsPanel({ results, config, onClose, onEmailAll }) {
-  const [selectedCompany, setSelectedCompany] = useState(null)
-  const [emailModalCompany, setEmailModalCompany] = useState(null)
+  const [selectedRecruiter, setSelectedRecruiter] = useState(null)
+  const [emailModalRecruiter, setEmailModalRecruiter] = useState(null)
   const [showExportMenu, setShowExportMenu] = useState(false)
   const exportMenuRef = useRef(null)
-  const companies = results?.data?.companies || []
 
-  // Close export menu when clicking outside
+  // Support both recruiters and companies keys
+  const recruiters = results?.data?.recruiters || results?.data?.companies || []
+
   useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (exportMenuRef.current && !exportMenuRef.current.contains(event.target)) {
-        setShowExportMenu(false)
-      }
-    }
-
-    if (showExportMenu) {
-      document.addEventListener('mousedown', handleClickOutside)
-      return () => document.removeEventListener('mousedown', handleClickOutside)
-    }
+    if (!showExportMenu) return
+    const handler = (e) => { if (exportMenuRef.current && !exportMenuRef.current.contains(e.target)) setShowExportMenu(false) }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
   }, [showExportMenu])
 
   const exportJSON = () => {
-    const dataStr = JSON.stringify(results, null, 2)
-    const dataBlob = new Blob([dataStr], { type: 'application/json' })
-    const url = URL.createObjectURL(dataBlob)
+    const blob = new Blob([JSON.stringify(results, null, 2)], { type: 'application/json' })
     const link = document.createElement('a')
-    link.href = url
-    link.download = `leads_${config.industry.replace(/\s+/g, '_')}_${Date.now()}.json`
+    link.href = URL.createObjectURL(blob)
+    link.download = `recruiters_${config.industry.replace(/\s+/g, '_')}_${Date.now()}.json`
     link.click()
     setShowExportMenu(false)
   }
 
   const exportTXT = () => {
-    let txtContent = `LEAD GENERATION RESULTS\n`
-    txtContent += `${'='.repeat(80)}\n\n`
-    txtContent += `Industry: ${config.industry}\n`
-    txtContent += `Country: ${config.country}\n`
-    txtContent += `Total Companies: ${companies.length}\n`
-    txtContent += `Generated: ${new Date().toLocaleString()}\n`
-    txtContent += `Web Scraping: ${config.enable_web_scraping ? 'Enabled' : 'Disabled'}\n\n`
-    txtContent += `${'='.repeat(80)}\n\n`
-
-    companies.forEach((company, index) => {
-      txtContent += `${index + 1}. ${company.company_name}\n`
-      txtContent += `${'-'.repeat(80)}\n`
-
-      if (company.website_url) txtContent += `Website: ${company.website_url}\n`
-      if (company.company_size) txtContent += `Size: ${company.company_size}\n`
-      if (company.headquarters_location) txtContent += `Location: ${company.headquarters_location}\n`
-      if (company.revenue_market_cap) txtContent += `Revenue: ${company.revenue_market_cap}\n`
-      if (company.number_of_users) txtContent += `Users: ${company.number_of_users}\n`
-
-      // Contact Information
-      txtContent += `\nContact Information:\n`
-      if (company.contact_email) txtContent += `  Email: ${company.contact_email}\n`
-      if (company.additional_emails && company.additional_emails.length > 0) {
-        txtContent += `  Additional Emails:\n`
-        company.additional_emails.forEach(email => {
-          txtContent += `    - ${email}\n`
-        })
-      }
-
-      // Social Media
-      if (company.social_media) {
-        txtContent += `\nSocial Media:\n`
-        Object.entries(company.social_media).forEach(([platform, url]) => {
-          if (url) txtContent += `  ${platform.charAt(0).toUpperCase() + platform.slice(1)}: ${url}\n`
-        })
-      }
-
-      // Business Information
-      if (company.key_products_services) {
-        txtContent += `\nProducts/Services: ${company.key_products_services}\n`
-      }
-      if (company.target_market) {
-        txtContent += `Target Market: ${company.target_market}\n`
-      }
-
-      // Customers
-      if (company.notable_customers && company.notable_customers.length > 0) {
-        txtContent += `\nNotable Customers:\n`
-        company.notable_customers.forEach(customer => {
-          txtContent += `  - ${customer}\n`
-        })
-      }
-
-      // Decision Makers
-      if (company.decision_maker_roles && company.decision_maker_roles.length > 0) {
-        txtContent += `\nDecision Maker Roles:\n`
-        company.decision_maker_roles.forEach(role => {
-          txtContent += `  - ${role}\n`
-        })
-      }
-
-      // News
-      if (company.recent_news_insights) {
-        txtContent += `\nRecent News: ${company.recent_news_insights}\n`
-      }
-
-      txtContent += `\n${'='.repeat(80)}\n\n`
+    let txt = `RECRUITER OUTREACH RESULTS\n${'='.repeat(80)}\n\nRole: ${config.industry}\nCountry: ${config.country}\nTotal: ${recruiters.length}\nDate: ${new Date().toLocaleString()}\n\n${'='.repeat(80)}\n\n`
+    recruiters.forEach((r, i) => {
+      txt += `${i+1}. ${r.recruiter_name || r.company_name}\n${'-'.repeat(60)}\n`
+      if (r.job_posted) txt += `Hiring: ${r.job_posted}\n`
+      if (r.time_posted) txt += `Posted: ${r.time_posted}\n`
+      if (r.job_description) txt += `Description: ${r.job_description}\n`
+      if (r.company_name) txt += `Company: ${r.company_name}\n`
+      if (r.contact_email) txt += `Email: ${r.contact_email}\n`
+      if (r.linkedin_url) txt += `LinkedIn: ${r.linkedin_url}\n`
+      if (r.location) txt += `Location: ${r.location}\n`
+      if (r.specializations) txt += `Specializations: ${r.specializations.join(', ')}\n`
+      if (r.recent_activity) txt += `Recent Activity: ${r.recent_activity}\n`
+      txt += '\n'
     })
-
-    const dataBlob = new Blob([txtContent], { type: 'text/plain' })
-    const url = URL.createObjectURL(dataBlob)
     const link = document.createElement('a')
-    link.href = url
-    link.download = `leads_${config.industry.replace(/\s+/g, '_')}_${Date.now()}.txt`
+    link.href = URL.createObjectURL(new Blob([txt], { type: 'text/plain' }))
+    link.download = `recruiters_${config.industry.replace(/\s+/g, '_')}_${Date.now()}.txt`
     link.click()
     setShowExportMenu(false)
   }
@@ -133,294 +61,159 @@ export default function ResultsPanel({ results, config, onClose, onEmailAll }) {
       {/* Header */}
       <div className="p-4 sm:p-6 border-b border-gray-200 bg-gray-50">
         <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900">Recruiters Found</h2>
           <div className="flex items-center space-x-2">
-            <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900">Lead Results</h2>
-          </div>
-
-          <div className="flex items-center space-x-2">
-
-            {/* Email All Button */}
-            {onEmailAll && companies.filter(c => c.contact_email).length > 0 && (
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={onEmailAll}
-                className="flex items-center space-x-1 sm:space-x-2 px-3 sm:px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
-              >
-                <Send className="w-4 h-4" />
-                <span className="hidden sm:inline font-medium">Email All</span>
+            {onEmailAll && recruiters.filter(r => r.contact_email).length > 0 && (
+              <motion.button whileHover={{ scale: 1.05 }} onClick={onEmailAll} className="flex items-center space-x-1 px-3 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors">
+                <Send className="w-4 h-4" /><span className="hidden sm:inline font-medium">Email All</span>
               </motion.button>
             )}
-
-            {/* Export Dropdown */}
             <div className="relative" ref={exportMenuRef}>
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => setShowExportMenu(!showExportMenu)}
-                className="flex items-center space-x-1 sm:space-x-2 px-3 sm:px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors"
-              >
-                <Download className="w-4 h-4" />
-                <span className="hidden sm:inline font-medium">Export</span>
-                <svg
-                  className={`w-4 h-4 transition-transform ${showExportMenu ? 'rotate-180' : ''}`}
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
+              <motion.button whileHover={{ scale: 1.05 }} onClick={() => setShowExportMenu(!showExportMenu)} className="flex items-center space-x-1 px-3 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors">
+                <Download className="w-4 h-4" /><span className="hidden sm:inline font-medium">Export</span>
               </motion.button>
-
-              {/* Dropdown Menu */}
               {showExportMenu && (
-                <motion.div
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-xl border border-gray-200 overflow-hidden z-10"
-                >
-                  <button
-                    onClick={exportJSON}
-                    className="w-full flex items-center space-x-3 px-4 py-3 hover:bg-gray-50 transition-colors"
-                  >
-                    <FileJson className="w-5 h-5 text-blue-600" />
-                    <div className="text-left">
-                      <div className="text-sm font-medium text-gray-900">Export as JSON</div>
-                      <div className="text-xs text-gray-500">Structured data format</div>
-                    </div>
-                  </button>
-
+                <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-xl border border-gray-200 overflow-hidden z-10">
+                  <button onClick={exportJSON} className="w-full flex items-center space-x-3 px-4 py-3 hover:bg-gray-50"><FileJson className="w-5 h-5 text-blue-600" /><div className="text-sm font-medium">JSON</div></button>
                   <div className="border-t border-gray-100"></div>
-
-                  <button
-                    onClick={exportTXT}
-                    className="w-full flex items-center space-x-3 px-4 py-3 hover:bg-gray-50 transition-colors"
-                  >
-                    <FileText className="w-5 h-5 text-green-600" />
-                    <div className="text-left">
-                      <div className="text-sm font-medium text-gray-900">Export as TXT</div>
-                      <div className="text-xs text-gray-500">Human-readable format</div>
-                    </div>
-                  </button>
+                  <button onClick={exportTXT} className="w-full flex items-center space-x-3 px-4 py-3 hover:bg-gray-50"><FileText className="w-5 h-5 text-green-600" /><div className="text-sm font-medium">TXT</div></button>
                 </motion.div>
               )}
             </div>
-
-            {/* Close Button (Mobile & All Devices) */}
             {onClose && (
-              <motion.button
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.9 }}
-                onClick={onClose}
-                className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
-                title="Close results panel"
-              >
+              <motion.button whileHover={{ scale: 1.1 }} onClick={onClose} className="p-2 hover:bg-gray-200 rounded-lg transition-colors">
                 <X className="w-5 h-5 text-gray-700" />
               </motion.button>
             )}
           </div>
         </div>
 
-        {/* Stats */}
         <div className="grid grid-cols-2 gap-3">
           <div className="bg-primary-50 rounded-xl p-3">
-            <div className="text-sm text-primary-600 font-medium">Total Leads</div>
-            <div className="text-2xl font-bold text-primary-700 mt-1">{companies.length}</div>
+            <div className="text-sm text-primary-600 font-medium">Total Found</div>
+            <div className="text-2xl font-bold text-primary-700 mt-1">{recruiters.length}</div>
           </div>
           <div className="bg-green-50 rounded-xl p-3">
             <div className="text-sm text-green-600 font-medium">With Emails</div>
-            <div className="text-2xl font-bold text-green-700 mt-1">
-              {companies.filter(c => c.contact_email).length}
-            </div>
+            <div className="text-2xl font-bold text-green-700 mt-1">{recruiters.filter(r => r.contact_email).length}</div>
           </div>
         </div>
       </div>
 
-      {/* Company List */}
+      {/* Recruiter List */}
       <div className="flex-1 overflow-y-auto p-6 space-y-3">
-        {companies.map((company, index) => (
+        {recruiters.map((recruiter, index) => (
           <motion.div
             key={index}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.05 }}
             whileHover={{ scale: 1.02 }}
-            onClick={() => setSelectedCompany(selectedCompany === index ? null : index)}
+            onClick={() => setSelectedRecruiter(selectedRecruiter === index ? null : index)}
             className="bg-gray-50 hover:bg-gray-100 rounded-xl p-4 cursor-pointer transition-all border border-gray-200 hover:border-primary-300"
           >
-            {/* Company Header */}
-            <div className="flex items-start justify-between mb-3">
+            <div className="flex items-start justify-between mb-2">
               <div className="flex-1">
                 <h3 className="font-bold text-gray-900 text-lg leading-tight">
-                  {company.company_name}
+                  {recruiter.recruiter_name || recruiter.company_name}
                 </h3>
-                <p className="text-sm text-gray-500 mt-1">
-                  {company.headquarters_location}
-                </p>
+                {recruiter.job_posted && <p className="text-sm text-primary-600 font-medium mt-0.5">Hiring: {recruiter.job_posted}</p>}
+                <p className="text-sm text-gray-500 mt-0.5">{recruiter.company_name}{recruiter.time_posted ? ` • ${recruiter.time_posted}` : ''}</p>
+                {recruiter.job_description && <p className="text-xs text-gray-500 mt-1 leading-relaxed">{recruiter.job_description}</p>}
               </div>
-              <Building2 className="w-8 h-8 text-primary-500 flex-shrink-0" />
+              <UserCheck className="w-8 h-8 text-primary-500 flex-shrink-0" />
             </div>
 
-            {/* Quick Info */}
             <div className="space-y-2 text-sm">
-              {company.company_size && (
-                <div className="flex items-center text-gray-600">
-                  <Users className="w-4 h-4 mr-2" />
-                  {company.company_size}
-                </div>
-              )}
-
-              {company.contact_email && (
+              {recruiter.contact_email && (
                 <div className="flex items-center justify-between">
                   <div className="flex items-center text-green-600 font-medium">
-                    <Mail className="w-4 h-4 mr-2" />
-                    {company.contact_email}
+                    <Mail className="w-4 h-4 mr-2" />{recruiter.contact_email}
                   </div>
-                  <motion.button
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      setEmailModalCompany(company)
-                    }}
-                    className="px-3 py-1.5 bg-primary-600 hover:bg-primary-700 text-white rounded-lg text-xs font-medium flex items-center space-x-1 transition-colors"
-                  >
-                    <Send className="w-3 h-3" />
-                    <span>Email</span>
+                  <motion.button whileHover={{ scale: 1.05 }} onClick={(e) => { e.stopPropagation(); setEmailModalRecruiter(recruiter) }}
+                    className="px-3 py-1.5 bg-primary-600 hover:bg-primary-700 text-white rounded-lg text-xs font-medium flex items-center space-x-1 transition-colors">
+                    <Send className="w-3 h-3" /><span>Email</span>
                   </motion.button>
                 </div>
               )}
+
+              {recruiter.linkedin_url && (
+                <a href={recruiter.linkedin_url} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}
+                  className="flex items-center text-blue-600 hover:text-blue-800 transition-colors">
+                  <Linkedin className="w-4 h-4 mr-2" /><span className="truncate">{recruiter.linkedin_url}</span>
+                  <ExternalLink className="w-3 h-3 ml-1 flex-shrink-0" />
+                </a>
+              )}
+
+              {recruiter.specializations && recruiter.specializations.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 mt-2">
+                  {recruiter.specializations.slice(0, 4).map((spec, i) => (
+                    <span key={i} className="px-2 py-0.5 bg-primary-100 text-primary-700 rounded-full text-xs font-medium">{spec}</span>
+                  ))}
+                </div>
+              )}
             </div>
 
-            {/* Social Media Icons */}
-            {company.social_media && (
-              <div className="flex items-center space-x-2 mt-3">
-                {Object.entries(company.social_media).map(([platform, url]) => {
-                  if (!url) return null
-                  const Icon = socialIcons[platform]
-                  if (!Icon) return null
-
-                  return (
-                    <a
-                      key={platform}
-                      href={url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      onClick={(e) => e.stopPropagation()}
-                      className="p-2 bg-white rounded-lg hover:bg-primary-50 transition-colors"
-                    >
-                      <Icon className="w-4 h-4 text-gray-600 hover:text-primary-600" />
-                    </a>
-                  )
-                })}
-              </div>
-            )}
-
             {/* Expanded Details */}
-            {selectedCompany === index && (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: 'auto', opacity: 1 }}
-                className="mt-4 pt-4 border-t border-gray-200 space-y-3"
-              >
-                {company.website_url && (
+            {selectedRecruiter === index && (
+              <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} className="mt-4 pt-4 border-t border-gray-200 space-y-3">
+                {recruiter.company_website && (
                   <div>
-                    <div className="text-xs font-semibold text-gray-500 uppercase mb-1">Website</div>
-                    <a
-                      href={company.website_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-sm text-primary-600 hover:underline"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      {company.website_url}
-                    </a>
+                    <div className="text-xs font-semibold text-gray-500 uppercase mb-1">Company Website</div>
+                    <a href={recruiter.company_website} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="text-sm text-primary-600 hover:underline">{recruiter.company_website}</a>
                   </div>
                 )}
-
-                {company.revenue_market_cap && (
+                {recruiter.company_type && (
                   <div>
-                    <div className="text-xs font-semibold text-gray-500 uppercase mb-1">Revenue</div>
-                    <div className="text-sm text-gray-700">{company.revenue_market_cap}</div>
+                    <div className="text-xs font-semibold text-gray-500 uppercase mb-1">Type</div>
+                    <span className="px-2 py-1 bg-gray-200 text-gray-700 rounded-lg text-xs capitalize">{recruiter.company_type}</span>
                   </div>
                 )}
-
-                {company.number_of_users && (
+                {recruiter.company_size && (
                   <div>
-                    <div className="text-xs font-semibold text-gray-500 uppercase mb-1">Users</div>
-                    <div className="text-sm text-gray-700">{company.number_of_users}</div>
+                    <div className="text-xs font-semibold text-gray-500 uppercase mb-1">Company Size</div>
+                    <div className="text-sm text-gray-700">{recruiter.company_size}</div>
                   </div>
                 )}
-
-                {company.key_products_services && (
+                {recruiter.industries_served && recruiter.industries_served.length > 0 && (
                   <div>
-                    <div className="text-xs font-semibold text-gray-500 uppercase mb-1">Products/Services</div>
-                    <div className="text-sm text-gray-700">{company.key_products_services}</div>
-                  </div>
-                )}
-
-                {company.notable_customers && company.notable_customers.length > 0 && (
-                  <div>
-                    <div className="text-xs font-semibold text-gray-500 uppercase mb-1">Notable Customers</div>
-                    <div className="flex flex-wrap gap-2">
-                      {company.notable_customers.map((customer, i) => (
-                        <span key={i} className="px-2 py-1 bg-primary-100 text-primary-700 rounded-lg text-xs">
-                          {customer}
-                        </span>
+                    <div className="text-xs font-semibold text-gray-500 uppercase mb-1">Industries Served</div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {recruiter.industries_served.map((ind, i) => (
+                        <span key={i} className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs">{ind}</span>
                       ))}
                     </div>
                   </div>
                 )}
-
-                {company.additional_emails && company.additional_emails.length > 0 && (
+                {recruiter.notable_clients_or_hires && recruiter.notable_clients_or_hires.length > 0 && (
                   <div>
-                    <div className="text-xs font-semibold text-gray-500 uppercase mb-1">Additional Emails</div>
-                    <div className="space-y-1">
-                      {company.additional_emails.map((email, i) => (
-                        <div key={i} className="text-sm text-gray-600">{email}</div>
+                    <div className="text-xs font-semibold text-gray-500 uppercase mb-1">Notable Clients/Hires</div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {recruiter.notable_clients_or_hires.map((c, i) => (
+                        <span key={i} className="px-2 py-0.5 bg-green-100 text-green-700 rounded-full text-xs">{c}</span>
                       ))}
                     </div>
                   </div>
                 )}
-
-                {company.decision_maker_roles && company.decision_maker_roles.length > 0 && (
+                {recruiter.recent_activity && (
                   <div>
-                    <div className="text-xs font-semibold text-gray-500 uppercase mb-1">Decision Makers</div>
-                    <div className="flex flex-wrap gap-2">
-                      {company.decision_maker_roles.slice(0, 5).map((role, i) => (
-                        <span key={i} className="px-2 py-1 bg-gray-200 text-gray-700 rounded-lg text-xs">
-                          {role}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {company.recent_news_insights && (
-                  <div>
-                    <div className="text-xs font-semibold text-gray-500 uppercase mb-1">Recent News</div>
-                    <div className="text-sm text-gray-700 leading-relaxed">{company.recent_news_insights}</div>
+                    <div className="text-xs font-semibold text-gray-500 uppercase mb-1">Recent Activity</div>
+                    <div className="text-sm text-gray-700 leading-relaxed">{recruiter.recent_activity}</div>
                   </div>
                 )}
               </motion.div>
             )}
 
-            {/* Click to expand indicator */}
             <div className="mt-3 text-xs text-center text-gray-400">
-              {selectedCompany === index ? 'Click to collapse' : 'Click to expand'}
+              {selectedRecruiter === index ? 'Click to collapse' : 'Click to expand'}
             </div>
           </motion.div>
         ))}
       </div>
 
-      {/* Email Modal */}
-      {emailModalCompany && (
-        <EmailModal
-          company={emailModalCompany}
-          onClose={() => setEmailModalCompany(null)}
-        />
+      {emailModalRecruiter && (
+        <EmailModal company={emailModalRecruiter} onClose={() => setEmailModalRecruiter(null)} />
       )}
     </motion.div>
   )
 }
-
